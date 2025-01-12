@@ -6,216 +6,219 @@ from gensim.models import Word2Vec
 import string
 import sys
 
-def prep_corpus(corpus_file):
-    print("reading and tokenizing corpus...")
-    lines = []
-    with open(corpus_file, 'r', encoding='utf-8') as f:
-        for line in f:
+def prepare_corpus(corpus_file_path):
+    print("reading and tokenizing the corpus...")
+    sentences = []
+    with open(corpus_file_path, 'r', encoding='utf-8') as file:
+        for line in file:
             try:
-                obj = json.loads(line.strip())
-                lines.append(obj['sentence_text'])
+                data = json.loads(line.strip())
+                sentences.append(data['sentence_text'])
             except:
                 pass
 
     tokenized_sentences = []
-    for sentence in lines:
+    for sentence in sentences:
         words = []
-        for w in sentence.split():
-            clean_w = w.strip(string.punctuation)
-            if clean_w and (not clean_w.isdigit()):
-                words.append(clean_w)
+        for word in sentence.split():
+            cleaned_word = word.strip(string.punctuation)
+            if cleaned_word and not cleaned_word.isdigit():
+                words.append(cleaned_word)
         tokenized_sentences.append(words)
-    print(f"done reading. total sentences: {len(tokenized_sentences)}")
+    print(f"finished reading. total sentences: {len(tokenized_sentences)}")
     return tokenized_sentences
 
-def train_model(tokenized_sentences):
-    print("training word2vec model...")
+def train_word2vec_model(tokenized_sentences):
+    print("training the word2vec model...")
     model = Word2Vec(
         sentences=tokenized_sentences,
         vector_size=50,
         window=5,
         min_count=1
     )
-    print("model trained.")
+    print("word2vec model trained.")
     return model
 
-def find_similar_words(model, test_words):
+def get_similar_words(model, words_to_test):
     print("finding similar words...")
-    results = {}
-    for w in test_words:
-        if w in model.wv:
-            similar = model.wv.most_similar(w, topn=5)
-            results[w] = similar
+    similar_words_dict = {}
+    for word in words_to_test:
+        if word in model.wv:
+            similar = model.wv.most_similar(word, topn=5)
+            similar_words_dict[word] = similar
         else:
-            results[w] = f"'{w}' not in vocabulary"
-    print("found similar words.")
-    return results
+            similar_words_dict[word] = f"'{word}' not in vocabulary"
+    print("similar words found.")
+    return similar_words_dict
 
-def make_sentence_embeddings(corpus_file, model):
+def create_sentence_embeddings(corpus_file_path, model):
     print("creating sentence embeddings...")
-    lines = []
-    with open(corpus_file, 'r', encoding='utf-8') as f:
-        for line in f:
+    sentences = []
+    with open(corpus_file_path, 'r', encoding='utf-8') as file:
+        for line in file:
             try:
-                obj = json.loads(line.strip())
-                lines.append(obj['sentence_text'])
+                data = json.loads(line.strip())
+                sentences.append(data['sentence_text'])
             except:
                 pass
 
-    sentence_embs = []
-    for sentence in lines:
-        valid_words = [w for w in sentence.split() if w in model.wv]
-        if len(valid_words) == 0:
-            vec = np.zeros(model.vector_size)
+    embeddings = []
+    for sentence in sentences:
+        valid_words = [word for word in sentence.split() if word in model.wv]
+        if not valid_words:
+            vector = np.zeros(model.vector_size)
         else:
-            vectors = [model.wv[w] for w in valid_words]
-            vec = np.mean(vectors, axis=0)
-        sentence_embs.append((sentence, vec))
-    print(f"created embeddings for {len(sentence_embs)} sentences.")
-    return sentence_embs
+            vectors = [model.wv[word] for word in valid_words]
+            vector = np.mean(vectors, axis=0)
+        embeddings.append((sentence, vector))
+    print(f"created embeddings for {len(embeddings)} sentences.")
+    return embeddings
 
-def student_cosine_similarity(v1, v2):
-    dot = np.dot(v1, v2)
-    norm1 = np.linalg.norm(v1)
-    norm2 = np.linalg.norm(v2)
+def cosine_similarity(vec1, vec2):
+    dot_product = np.dot(vec1, vec2)
+    norm1 = np.linalg.norm(vec1)
+    norm2 = np.linalg.norm(vec2)
     if norm1 == 0 or norm2 == 0:
         return 0.0
-    return dot / (norm1 * norm2)
+    return dot_product / (norm1 * norm2)
 
-def find_most_similar_sentences(sentence_embs, model):
-    print("finding most similar sentences...")
-    valid_indices = []
-    for i, (sent, vec) in enumerate(sentence_embs):
-        count_valid = 0
-        for word in sent.split():
-            if word in model.wv:
-                count_valid += 1
-        if count_valid >= 4:
-            valid_indices.append(i)
+def find_similar_sentences(sentence_embeddings, model):
+    print("looking for similar sentences...")
+    valid_sentence_indices = []
+    for index, (sentence, vector) in enumerate(sentence_embeddings):
+        valid_word_count = sum(1 for word in sentence.split() if word in model.wv)
+        if valid_word_count >= 4:
+            valid_sentence_indices.append(index)
 
-    if len(valid_indices) == 0:
-        print("no valid sentences found.")
+    if not valid_sentence_indices:
+        print("no valid sentences to compare.")
         return []
 
-    if len(valid_indices) <= 10:
-        chosen = valid_indices
-    else:
-        chosen = random.sample(valid_indices, 10)
+    selected_indices = valid_sentence_indices if len(valid_sentence_indices) <= 10 else random.sample(valid_sentence_indices, 10)
 
-    results = []
-    for idx in chosen:
-        sentA, vecA = sentence_embs[idx]
+    similar_sentences = []
+    for idx in selected_indices:
+        original_sentence, original_vector = sentence_embeddings[idx]
         best_score = -1
-        best_sent = None
+        best_sentence = None
 
-        for j, (sentB, vecB) in enumerate(sentence_embs):
+        for j, (comp_sentence, comp_vector) in enumerate(sentence_embeddings):
             if j == idx:
                 continue
-            sim = student_cosine_similarity(vecA, vecB)
-            if sim > best_score:
-                best_score = sim
-                best_sent = sentB
+            similarity = cosine_similarity(original_vector, comp_vector)
+            if similarity > best_score:
+                best_score = similarity
+                best_sentence = comp_sentence
 
-        results.append((sentA, best_sent, best_score))
-    print("found similar sentences.")
-    return results
+        similar_sentences.append((original_sentence, best_sentence, best_score))
+    print("similar sentences identified.")
+    return similar_sentences
 
-def replace_red_words_sentences(model):
-    print("replacing red words in sentences...")
+def replace_target_words(model):
+    print("replacing target words in sentences...")
     data = [
         {
             "sentence": "בעוד מספר דקות נתחיל את הדיון בנושא השבת החטופים.",
-            "red_words": ["דקות", "דיון"]
+            "target_words": ["דקות", "דיון"]
         },
         {
             "sentence": "בתור יושבת ראש הוועדה, אני מוכנה להאריך את ההסכם באותם תנאים.",
-            "red_words": ["וועדה", "אני", "ההסכם"]
+            "target_words": ["וועדה", "אני", "ההסכם"]
         },
         {
             "sentence": "בוקר טוב, אני פותח את הישיבה.",
-            "red_words": ["בוקר", "פותח"]
+            "target_words": ["בוקר", "פותח"]
         },
         {
             "sentence": "שלום, אנחנו שמחים להודיע שחברינו היקר קיבל קידום.",
-            "red_words": ["שלום", "שמחים", "יקר", "קידום"]
+            "target_words": ["שלום", "שמחים", "יקר", "קידום"]
         },
         {
             "sentence": "אין מניעה להמשיך לעסוק ב נושא.",
-            "red_word": ["מניעה"]
+            "target_words": ["מניעה"]
         }
     ]
 
-    all_results = []
-    idx = 1
+    replacement_results = []
+    sentence_id = 1
     for item in data:
-        sent = item["sentence"]
-        red_words = item.get("red_words", item.get("red_word", []))
+        original_sentence = item["sentence"]
+        target_words = item.get("target_words", [])
         replaced_info = []
-        new_sent = sent
+        new_sentence = original_sentence
 
-        for rw in red_words:
-            if rw in model.wv:
-                sims = model.wv.most_similar(rw, topn=1)
-                if len(sims) > 0:
-                    new_w = sims[0][0]
-                    new_sent = new_sent.replace(rw, new_w, 1)
-                    replaced_info.append((rw, new_w))
+        for target_word in target_words:
+            if target_word in model.wv:
+                similar = model.wv.most_similar(target_word, topn=1)
+                if similar:
+                    new_word = similar[0][0]
+                    new_sentence = new_sentence.replace(target_word, new_word, 1)
+                    replaced_info.append((target_word, new_word))
                 else:
-                    replaced_info.append((rw, "no suggestion"))
+                    replaced_info.append((target_word, "no suggestion"))
             else:
-                replaced_info.append((rw, "not in vocab"))
-        all_results.append((idx, sent, new_sent, replaced_info))
-        idx += 1
-    print("replaced red words.")
-    return all_results
+                replaced_info.append((target_word, "not in vocab"))
+        replacement_results.append((sentence_id, original_sentence, new_sentence, replaced_info))
+        sentence_id += 1
+    print("target words replaced.")
+    return replacement_results
 
 if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("usage: python script.py <corpus_file> <output_folder>")
+        sys.exit(1)
+
     corpus_file = sys.argv[1]
-    output_folder = sys.argv[2]
+    output_dir = sys.argv[2]
 
-    # train model
-    tok_sents = prep_corpus(corpus_file)
-    model = train_model(tok_sents)
+    # make sure the output directory exists
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
-    # save the model
-    print("saving model...")
-    model_path = os.path.join(output_folder, "knesset_word2vec.model")
-    model.save(model_path)
-    print(f"model saved to {model_path}")
+    # get the script's directory to save the model there
+    script_directory = os.path.dirname(os.path.abspath(__file__))
 
-    # find similar words
-    test_words = ["ישראל", "גברת", "ממשלה", "חבר", "בוקר", "מים", "אסור", "רשות", "זכויות"]
-    similar_wds = find_similar_words(model, test_words)
-    sim_words_file = os.path.join(output_folder, "knesset_similar_words.txt")
-    print(f"writing similar words to {sim_words_file}...")
-    with open(sim_words_file, 'w', encoding='utf-8') as f:
-        for w, sim_list in similar_wds.items():
-            if isinstance(sim_list, str):
-                f.write(f"{w}: {sim_list}\n")
+    # prepare and train the model
+    tokenized_sentences = prepare_corpus(corpus_file)
+    word2vec_model = train_word2vec_model(tokenized_sentences)
+
+    # save the model in the script's directory
+    model_save_path = os.path.join(script_directory, "knesset_word2vec.model")
+    word2vec_model.save(model_save_path)
+    print(f"model saved to {model_save_path}")
+
+    # find similar words and save to output folder
+    words_to_check = ["ישראל", "גברת", "ממשלה", "חבר", "בוקר", "מים", "אסור", "רשות", "זכויות"]
+    similar_words = get_similar_words(word2vec_model, words_to_check)
+    similar_words_file = os.path.join(output_dir, "knesset_similar_words.txt")
+    with open(similar_words_file, 'w', encoding='utf-8') as file:
+        for word, sims in similar_words.items():
+            if isinstance(sims, str):
+                file.write(f"{word}: {sims}\n")
             else:
-                sim_str = ", ".join([f"({sw}, {sc:.4f})" for sw, sc in sim_list])
-                f.write(f"{w}: {sim_str}\n")
-    print("done writing similar words.")
+                sims_formatted = ", ".join([f"({sim_word}, {sim_score:.4f})" for sim_word, sim_score in sims])
+                file.write(f"{word}: {sims_formatted}\n")
+    print(f"similar words saved to {similar_words_file}")
 
-    # sentence embeddings and similar sentences
-    sentence_embs = make_sentence_embeddings(corpus_file, model)
-    top_sims = find_most_similar_sentences(sentence_embs, model)
-    sim_sents_file = os.path.join(output_folder, "knesset_similar_sentences.txt")
-    print(f"writing similar sentences to {sim_sents_file}...")
-    with open(sim_sents_file, 'w', encoding='utf-8') as f:
-        for orig, best, score in top_sims:
-            f.write(f"{orig}\n")
-            f.write("most similar sentence:\n")
-            f.write(f"{best}\n\n")
-    print("done writing similar sentences.")
+    # create sentence embeddings, find similar sentences, and save to output folder
+    sentence_embeddings = create_sentence_embeddings(corpus_file, word2vec_model)
+    similar_sentences = find_similar_sentences(sentence_embeddings, word2vec_model)
+    similar_sentences_file = os.path.join(output_dir, "knesset_similar_sentences.txt")
+    with open(similar_sentences_file, 'w', encoding='utf-8') as file:
+        for original, similar, score in similar_sentences:
+            file.write(f"{original}\n")
+            file.write("most similar sentence:\n")
+            file.write(f"{similar}\n\n")
+    print(f"similar sentences saved to {similar_sentences_file}")
 
-    # replace red words
-    replaced = replace_red_words_sentences(model)
-    red_file = os.path.join(output_folder, "red_words_sentences.txt")
-    print(f"writing replaced sentences to {red_file}...")
-    with open(red_file, 'w', encoding='utf-8') as f:
-        for idx, old_s, new_s, rep_info in replaced:
-            f.write(f"{idx}: {old_s}: {new_s}\n")
-            replaced_str = ", ".join([f"({o}->{n})" for o, n in rep_info])
-            f.write(f"replaced words: {replaced_str}\n\n")
-    print("all tasks done.")
+    # replace target words and save to output folder
+    replaced_sentences = replace_target_words(word2vec_model)
+    replaced_words_file = os.path.join(output_dir, "red_words_sentences.txt")
+    with open(replaced_words_file, 'w', encoding='utf-8') as file:
+        for idx, old_sentence, new_sentence, replacements in replaced_sentences:
+            file.write(f"{idx}: {old_sentence} => {new_sentence}\n")
+            replacements_str = ", ".join([f"({old}->{new})" for old, new in replacements])
+            file.write(f"replaced words: {replacements_str}\n\n")
+    print(f"replaced sentences saved to {replaced_words_file}")
+
+    print("all tasks completed.")

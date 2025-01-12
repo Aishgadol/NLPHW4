@@ -92,4 +92,3 @@ if __name__ == "__main__":
     # Step 4: Replace red words and save results
     replace_red_words(model, sentences, red_words, "red_words_sentences.txt")
 
-    print\("Replaced words saved to red_words_sentences.txt"\)
