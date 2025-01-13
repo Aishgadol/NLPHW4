@@ -32,7 +32,7 @@ def train_word2vec_model(tokenized_sentences):
     print("training the word2vec model...")
     model = Word2Vec(
         sentences=tokenized_sentences,
-        vector_size=200,
+        vector_size=150,
         window=7,
         min_count=1
     )
