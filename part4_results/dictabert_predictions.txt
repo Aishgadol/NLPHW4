@@ -1,0 +1,40 @@
+masked_sentence: [*] נכנס לזה .
+dictabert_sentence: לא נכנס לזה .
+dictabert tokens: לא
+
+masked_sentence: אם [*] [*] הערוצים היו מגיעים לכאן היית שומעת אותי אומר דברים קשים על השחיתות הכלכלית , המוסרית והחינוכית , המוטמעת ביסודותיהם של הערוצים האלו , שכל [*] שמעניין אותם זה בצע הכסף והשחתת המידות .
+dictabert_sentence: אם כל מנהלי הערוצים היו מגיעים לכאן היית שומעת אותי אומר דברים קשים על השחיתות הכלכלית , המוסרית והחינוכית , המוטמעת ביסודותיהם של הערוצים האלו , שכל מה שמעניין אותם זה בצע הכסף והשחתת המידות .
+dictabert tokens: כל,מנהלי,מה
+
+masked_sentence: [*] לך להתערב בכלל ?
+dictabert_sentence: מותר לך להתערב בכלל ?
+dictabert tokens: מותר
+
+masked_sentence: אני [*] לסכם .
+dictabert_sentence: אני רוצה לסכם .
+dictabert tokens: רוצה
+
+masked_sentence: אני מניח שהוא [*] התכוון לגבולות ההבטחה של אברהם אבינו .
+dictabert_sentence: אני מניח שהוא לא התכוון לגבולות ההבטחה של אברהם אבינו .
+dictabert tokens: לא
+
+masked_sentence: אמרתי , אנחנו בתהליך של לימוד וממכרז למכרז [*] משפרים .
+dictabert_sentence: אמרתי , אנחנו בתהליך של לימוד וממכרז למכרז אנחנו משפרים .
+dictabert tokens: אנחנו
+
+masked_sentence: [*] הערה לממשלה .
+dictabert_sentence: עוד הערה לממשלה .
+dictabert tokens: עוד
+
+masked_sentence: היהודים בונים לא בשביל לשפר דיור [*] אלא הם בונים בשביל מפעלי תעשייה וקניונים מסחריים .
+dictabert_sentence: היהודים בונים לא בשביל לשפר דיור , אלא הם בונים בשביל מפעלי תעשייה וקניונים מסחריים .
+dictabert tokens: ,
+
+masked_sentence: כפי שניסחנו בחנ"ז [*]
+dictabert_sentence: כפי שניסחנו בחנ"ז .
+dictabert tokens: .
+
+masked_sentence: לא איכפת לי להמשיך לגור בקרוואן , [*] לי קרוואן מאוד יפה עם מכונת אספרסו קטנה ונוף יפה .
+dictabert_sentence: לא איכפת לי להמשיך לגור בקרוואן , יש לי קרוואן מאוד יפה עם מכונת אספרסו קטנה ונוף יפה .
+dictabert tokens: יש
+
